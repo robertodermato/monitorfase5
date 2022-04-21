@@ -600,6 +600,17 @@ public class Sistema {
             }
         }
 
+        public void dumpPagina (Word[]m, int pagina){
+            int ini = tamPagina * pagina;
+            int fim = ini + tamPagina;
+            for (int i = ini; i < fim; i++) {
+                System.out.print(i);
+                System.out.print(":  ");
+                dump(m[i]);
+            }
+        }
+
+
         // retorna null se não conseguir alocar, ou um array com os frames alocadas
         public int[] aloca(Word[] programa) {
             int quantidadePaginas = programa.length / tamPagina;
@@ -823,6 +834,22 @@ public class Sistema {
         gm.dumpMemoriaUsada(vm.m);
     }
 
+    public void dump (int processId){
+        System.out.println("----------- dump do processo " + processId + "------------------");
+        int [] paginasAlocadas = gp.getPaginasAlocadas(processId);
+        for (int i=0; i<paginasAlocadas.length; i++){
+            gm.dumpPagina(vm.m, paginasAlocadas[i]);
+        }
+    }
+
+    public void dumpM (int inicio, int fim){
+        System.out.println("----------- dump com inicio em " + inicio + " e fim em " + fim);
+        for (int i = inicio; i<=fim; i++){
+            //System.out.println("fazendo dumop da página " + i);
+            gm.dumpPagina(vm.m, i);
+        }
+    }
+
     // -------------------  S I S T E M A - fim --------------------------------------------------------------
     // -------------------------------------------------------------------------------------------------------
 
@@ -874,13 +901,15 @@ public class Sistema {
         //s.roda(progs.bubbleSort);
 
         // Fase 5 - Gernciador de Processos
-        //s.cria(progs.bubbleSort);
-        //s.cria(progs.bubbleSort);
-        //s.cria(progs.bubbleSort);
-        s.cria(progs.fatorial);
-        s.cria(progs.fatorial);
-        s.cria(progs.fatorial);
-        s.executa(1);
+        s.cria(progs.bubbleSort);
+        s.cria(progs.bubbleSort);
+        s.cria(progs.bubbleSort);
+        //s.cria(progs.fatorial);
+        //s.cria(progs.fatorial);
+        //s.cria(progs.fatorial);
+        //s.executa(1);
+        //s.dump(2);
+        s.dumpM(2,5);
 
     }
 
