@@ -698,13 +698,31 @@ public class Sistema {
         }
 
         public int[] getPaginasAlocadas (int process_id){
-            int [] paginasAlocadas = null;
+            int [] paginasAlocadas = new int[1];
+            boolean achou = false;
             for (int i = 0; i < prontos.size(); i++) {
                 if (prontos.get(i).id==process_id){
                     paginasAlocadas = prontos.get(i).paginasAlocadas;
+                    achou = true;
                 }
             }
+
+            if (achou==false){
+                paginasAlocadas= new int[1];
+                paginasAlocadas[0]=-1;
+            }
+
             return paginasAlocadas;
+        }
+
+        public PCB getProcesso (int process_id){
+            PCB processo = null;
+            for (int i = 0; i < prontos.size(); i++) {
+                if (prontos.get(i).id==process_id){
+                    processo = prontos.get(i);
+                }
+            }
+            return processo;
         }
 
         public int criaProcesso(Word [] programa){
@@ -823,7 +841,12 @@ public class Sistema {
     }
 
     public void executa(int processId) {
+        System.out.println("Iniciando execução do processo");
         int [] paginasAlocadas = gp.getPaginasAlocadas(processId);
+        if (paginasAlocadas[0]==-1){
+            System.out.println("Processo não existe");
+            return;
+        }
         System.out.println("Páginas alocadas");
         for (int i=0; i<paginasAlocadas.length; i++){
             System.out.println(paginasAlocadas[i] + " ");
@@ -837,6 +860,7 @@ public class Sistema {
     public void dump (int processId){
         System.out.println("----------- dump do processo " + processId + "------------------");
         int [] paginasAlocadas = gp.getPaginasAlocadas(processId);
+
         for (int i=0; i<paginasAlocadas.length; i++){
             gm.dumpPagina(vm.m, paginasAlocadas[i]);
         }
@@ -848,6 +872,17 @@ public class Sistema {
             //System.out.println("fazendo dumop da página " + i);
             gm.dumpPagina(vm.m, i);
         }
+    }
+
+    public void desaloca (int processId){
+        PCB processo = gp.getProcesso(processId);
+        int [] paginasAlocadas = gp.getPaginasAlocadas(processId);
+        gp.finalizaProcesso(processo);
+        System.out.println("--------------Processo " + processId + " desalocado---------------");
+        for (int i=0; i<paginasAlocadas.length; i++){
+            gm.dumpPagina(vm.m, paginasAlocadas[i]);
+        }
+
     }
 
     // -------------------  S I S T E M A - fim --------------------------------------------------------------
@@ -907,9 +942,10 @@ public class Sistema {
         //s.cria(progs.fatorial);
         //s.cria(progs.fatorial);
         //s.cria(progs.fatorial);
-        //s.executa(1);
+        //s.executa(5);
         //s.dump(2);
-        s.dumpM(2,5);
+        //s.dumpM(2,5);
+        //s.desaloca(2);
 
     }
 
