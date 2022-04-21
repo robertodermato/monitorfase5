@@ -591,8 +591,8 @@ public class Sistema {
             return quantidade;
         }
 
-        public void dumpMemoriaUsada(Word[] m, int fim) {
-            fim = getQuantidadePaginasUsadas() * tamPagina;
+        public void dumpMemoriaUsada(Word[] m) {
+            int fim = getQuantidadePaginasUsadas() * tamPagina;
             for (int i = 0; i < fim; i++) {
                 System.out.print(i);
                 System.out.print(":  ");
@@ -675,23 +675,34 @@ public class Sistema {
         private LinkedList<PCB> prontos;
         private int process_id;
 
-        public GerenciadorProcessos() {
+        public GerenciadorProcessos(GerenciadorMemoria gm, Word[] memory) {
             process_id=0;
-        }
-
-        public void setAttributes(GerenciadorMemoria gm, Word[] memory, LinkedList<PCB> prontos) {
             this.gm = gm;
             this.memory = memory;
-            this.prontos = prontos;
+            this.prontos = new LinkedList<>();
         }
 
-        public boolean criaProcesso(Word [] programa){
+        public LinkedList<PCB> getProntos() {
+            return prontos;
+        }
+
+        public int[] getPaginasAlocadas (int process_id){
+            int [] paginasAlocadas = null;
+            for (int i = 0; i < prontos.size(); i++) {
+                if (prontos.get(i).id==process_id){
+                    paginasAlocadas = prontos.get(i).paginasAlocadas;
+                }
+            }
+            return paginasAlocadas;
+        }
+
+        public int criaProcesso(Word [] programa){
             System.out.println("Processo " + process_id + " criado");
             int[] paginasAlocadas = gm.aloca(programa);
 
             // Se o processo não foi criado por falta de memória, retorna falso
             if (paginasAlocadas[0]==-1){
-                return false;
+                return -1;
             }
 
             PCB processo = new PCB(process_id, paginasAlocadas);
@@ -704,7 +715,7 @@ public class Sistema {
                 System.out.println(paginasAlocadas[i] + " ");
             }
 
-            return true;
+            return process_id-1;
         }
 
 
@@ -748,23 +759,18 @@ public class Sistema {
     public static Programas progs;
     public GerenciadorMemoria gm;
     public GerenciadorProcessos gp;
-    private LinkedList<PCB> prontos;
-    private LinkedList<PCB> bloqueados;
 
     public Sistema(int tamMemoria, int tamPagina, int maxInt){   // a VM com tratamento de interrupções
         vm = new VM(tamMemoria, tamPagina, maxInt);
         monitor = new Monitor();
         progs = new Programas();
         gm = new GerenciadorMemoria(vm.m, tamPagina);
-        gp = new GerenciadorProcessos();
-        prontos = new LinkedList();
-
-        gp.setAttributes(gm, vm.m, prontos);
+        gp = new GerenciadorProcessos(gm, vm.m);
     }
 
     public void roda(Word[] programa){
         //monitor.carga(programa, vm.m);
-        if (gp.criaProcesso(programa)==false){
+        if (gp.criaProcesso(programa)==-1){
             System.out.println("Falta memoria para rodar o programa");
             return;
         }
@@ -772,14 +778,49 @@ public class Sistema {
         System.out.println("---------------------------------- programa carregado ");
 
         //monitor.dump(vm.m, 0, programa.length);
-        gm.dumpMemoriaUsada(vm.m, gm.getQuantidadePaginasUsadas());
+        gm.dumpMemoriaUsada(vm.m);
 
         monitor.executa();
         System.out.println("---------------------------------- após execucao ");
 
         //monitor.dump(vm.m, 0, programa.length);
-        gm.dumpMemoriaUsada(vm.m, gm.getQuantidadePaginasUsadas());
+        gm.dumpMemoriaUsada(vm.m);
 
+    }
+
+    // Fase 5 - Para demonstrar o funcionamento, você deve ter um sistema iterativo.
+    // Uma vez que o sistema esteja funcionando, ele fica esperando comandos.
+    // Os comandos possíveis são:
+    // cria nomeDePrograma - cria um processo com memória alocada, PCB, etc. que fica em uma lista de processos.
+    // esta chamada retorna um identificador único do processo no sistema (ex.: 1, 2, 3 …)
+    // executa id - executa o processo com id fornecido. se não houver processo, retorna erro.
+    // dump id - lista o conteúdo do PCB e o conteúdo de cada frame de memória do processo com id
+    // dumpM inicio fim - lista os frames de memória entre início e fim, independente do processo
+    // desaloca id - retira o processo id do sistema, tenha ele executado ou não
+
+    public int cria(Word[] programa){
+        int idDoProcessoCriado;
+        idDoProcessoCriado = gp.criaProcesso(programa);
+        if (idDoProcessoCriado==-1){
+            System.out.println("Falta memoria para rodar o programa");
+            return idDoProcessoCriado;
+        }
+
+        System.out.println("---------------------------------- programa carregado ");
+        gm.dumpMemoriaUsada(vm.m);
+        return idDoProcessoCriado;
+    }
+
+    public void executa(int processId) {
+        int [] paginasAlocadas = gp.getPaginasAlocadas(processId);
+        System.out.println("Páginas alocadas");
+        for (int i=0; i<paginasAlocadas.length; i++){
+            System.out.println(paginasAlocadas[i] + " ");
+        }
+        vm.cpu.setContext(0, paginasAlocadas);          // monitor seta contexto - pc aponta para inicio do programa
+        vm.cpu.run();                  //                         e cpu executa
+        System.out.println("---------------------------------- programa executado ");
+        gm.dumpMemoriaUsada(vm.m);
     }
 
     // -------------------  S I S T E M A - fim --------------------------------------------------------------
@@ -817,7 +858,7 @@ public class Sistema {
         //s.roda(progs.fatorialComInput);
 
         // Fase 4 - Testa o Gerenciador de Memória - mockamos frames 0 e 2 como sempre ocupados
-        s.roda(progs.bubbleSort);
+        //s.roda(progs.bubbleSort);
         //s.roda(progs.fatorial);
         //s.roda(progs.fatorial);
         //s.roda(progs.fatorial);
@@ -831,6 +872,16 @@ public class Sistema {
         //s.roda(progs.bubbleSort);
         //s.roda(progs.bubbleSort);
         //s.roda(progs.bubbleSort);
+
+        // Fase 5 - Gernciador de Processos
+        //s.cria(progs.bubbleSort);
+        //s.cria(progs.bubbleSort);
+        //s.cria(progs.bubbleSort);
+        s.cria(progs.fatorial);
+        s.cria(progs.fatorial);
+        s.cria(progs.fatorial);
+        s.executa(1);
+
     }
 
     // -------------------------------------------------------------------------------------------------------
